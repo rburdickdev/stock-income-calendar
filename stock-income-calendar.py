@@ -1,36 +1,50 @@
 import requests
+import tkinter as tk
 
-def get_data(api_key, url):
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {api_key}'
+def get_dividend_data(symbol):
+    api_key = "SYCORXKZW2OC5QIM"  # Replace with your Alpha Vantage API key
+    base_url = "https://www.alphavantage.co/query"
+
+    params = {
+        "function": "OVERVIEW",
+        "symbol": symbol,
+        "apikey": api_key,
     }
 
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an exception for bad responses
+    response = requests.get(base_url, params=params)
+    data = response.json()
 
-        # Assuming the response is in JSON format
-        json_response = response.json()
+    return data.get("DividendPerShare", ""), data.get("ExDividendDate", ""), data.get("DividendDate", "")
 
-        return json_response
+def display_dividend_calendar():
+    symbols = entry.get().split(",")
+    dividend_calendar.delete(1.0, tk.END)
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
-        return None
+    for symbol in symbols:
+        dividend, ex_date, pay_date = get_dividend_data(symbol)
+        if dividend and ex_date and pay_date:
+            dividend_calendar.insert(tk.END, f"{symbol}\n")
+            dividend_calendar.insert(tk.END, f"  Dividend: {dividend}\n")
+            dividend_calendar.insert(tk.END, f"  Ex-Date: {ex_date}\n")
+            dividend_calendar.insert(tk.END, f"  Pay-Date: {pay_date}\n\n")
 
-symbol = input("Enter a Ticker Symbol: ")
-api_key = 'SYCORXKZW2OC5QIM'
-overview_api_url = 'https://www.alphavantage.co/query?function=OVERVIEW&symbol='+symbol+'&apikey='+api_key
-quote_api_url = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+symbol+'&apikey='+api_key
+# Create the main window
+app = tk.Tk()
+app.title("Dividend Income Calendar")
 
-overview_data = get_data(api_key, overview_api_url)
-quote_data = get_data(api_key, quote_api_url)
+# Create and place widgets
+label = tk.Label(app, text="Enter stock symbols (comma-separated):")
+label.pack(pady=10)
 
-if overview_data:
-    print("----- Overview Data -----")
-    print(overview_data)
+entry = tk.Entry(app, width=30)
+entry.pack(pady=10)
 
-if quote_data:
-    print("----- Quote Data -----")
-    print(quote_data)
+button = tk.Button(app, text="Get Dividend Calendar", command=display_dividend_calendar)
+button.pack(pady=10)
+
+dividend_calendar = tk.Text(app, height=15, width=50)
+dividend_calendar.pack(pady=10)
+
+# Run the application
+app.mainloop()
+
